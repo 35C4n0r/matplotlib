@@ -813,7 +813,7 @@ class Axes(_AxesBase):
         # Helper method to check that vals are not unitized
         for val, name in zip(vals, names):
             if not munits._is_natively_supported(val):
-                raise ValueError(f"{name!r} must be a single scalar value, "
+                raise ValueError(f"{name} must be a single scalar value, "
                                  f"but got {val!r}")
 
     @docstring.dedent_interpd
@@ -3075,7 +3075,7 @@ class Axes(_AxesBase):
 
         _api.check_isinstance(Number, radius=radius, startangle=startangle)
         if radius <= 0:
-            raise ValueError(f'radius must be a positive number, not {radius!r}')
+            raise ValueError(f'radius must be a positive number, not {radius}')
 
         # Starting theta1 is the start fraction of the circle
         theta1 = startangle / 360
@@ -5167,7 +5167,7 @@ default: :rc:`scatter.edgecolors`
         for name, array in [
                 (ind_dir, ind), (f"{dep_dir}1", dep1), (f"{dep_dir}2", dep2)]:
             if array.ndim > 1:
-                raise ValueError(f"{name!r} is not 1-dimensional")
+                raise ValueError(f"{name} is not 1-dimensional")
 
         if where is None:
             where = True
@@ -7633,7 +7633,7 @@ such objects
             else:
                 Z = 20. * np.log10(spec)
         else:
-            raise ValueError(f'Unknown scale {scale!r}')
+            raise ValueError(f'Unknown scale {scale}')
 
         Z = np.flipud(Z)
 
