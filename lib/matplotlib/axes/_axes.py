@@ -675,7 +675,7 @@ class Axes(_AxesBase):
     @docstring.dedent_interpd
     def axhline(self, y=0, xmin=0, xmax=1, **kwargs):
         """
-        Add a horizontal line across the Axes.
+        Add a horizontal line across the axis.
 
         Parameters
         ----------
@@ -814,7 +814,7 @@ class Axes(_AxesBase):
         for val, name in zip(vals, names):
             if not munits._is_natively_supported(val):
                 raise ValueError(f"{name} must be a single scalar value, "
-                                 f"but got {val}")
+                                 f"but got {val!r}")
 
     @docstring.dedent_interpd
     def axline(self, xy1, xy2=None, *, slope=None, **kwargs):
@@ -2153,7 +2153,7 @@ class Axes(_AxesBase):
             try:
                 x0 = cbook.safe_first_element(x0)
             except (TypeError, IndexError, KeyError):
-                pass
+                x0 = x0
 
             try:
                 x = cbook.safe_first_element(xconv)
@@ -3525,8 +3525,7 @@ class Axes(_AxesBase):
                 showbox=None, showfliers=None, boxprops=None,
                 labels=None, flierprops=None, medianprops=None,
                 meanprops=None, capprops=None, whiskerprops=None,
-                manage_ticks=True, autorange=False, zorder=None,
-                capwidths=None):
+                manage_ticks=True, autorange=False, zorder=None):
         """
         Draw a box and whisker plot.
 
@@ -3693,8 +3692,6 @@ class Axes(_AxesBase):
             Show the arithmetic means.
         capprops : dict, default: None
             The style of the caps.
-        capwidths : float or array, default: None
-            The widths of the caps.
         boxprops : dict, default: None
             The style of the box.
         whiskerprops : dict, default: None
@@ -3823,8 +3820,7 @@ class Axes(_AxesBase):
                            medianprops=medianprops, meanprops=meanprops,
                            meanline=meanline, showfliers=showfliers,
                            capprops=capprops, whiskerprops=whiskerprops,
-                           manage_ticks=manage_ticks, zorder=zorder,
-                           capwidths=capwidths)
+                           manage_ticks=manage_ticks, zorder=zorder)
         return artists
 
     def bxp(self, bxpstats, positions=None, widths=None, vert=True,
@@ -3832,8 +3828,7 @@ class Axes(_AxesBase):
             showcaps=True, showbox=True, showfliers=True,
             boxprops=None, whiskerprops=None, flierprops=None,
             medianprops=None, capprops=None, meanprops=None,
-            meanline=False, manage_ticks=True, zorder=None,
-            capwidths=None):
+            meanline=False, manage_ticks=True, zorder=None):
         """
         Drawing function for box and whisker plots.
 
@@ -3870,10 +3865,6 @@ class Axes(_AxesBase):
         widths : float or array-like, default: None
           The widths of the boxes.  The default is
           ``clip(0.15*(distance between extreme positions), 0.15, 0.5)``.
-
-        capwidths : float or array-like, default: None
-          Either a scalar or a vector and sets the width of each cap.
-          The default is ``0.5*(with of the box)``, see *widths*.
 
         vert : bool, default: True
           If `True` (default), makes the boxes vertical.
@@ -4007,16 +3998,7 @@ class Axes(_AxesBase):
         elif len(widths) != N:
             raise ValueError(datashape_message.format("widths"))
 
-        # capwidth
-        if capwidths is None:
-            capwidths = 0.5 * np.array(widths)
-        elif np.isscalar(capwidths):
-            capwidths = [capwidths] * N
-        elif len(capwidths) != N:
-            raise ValueError(datashape_message.format("capwidths"))
-
-        for pos, width, stats, capwidth in zip(positions, widths, bxpstats,
-                                               capwidths):
+        for pos, width, stats in zip(positions, widths, bxpstats):
             # try to find a new label
             datalabels.append(stats.get('label', pos))
 
@@ -4025,8 +4007,8 @@ class Axes(_AxesBase):
             whislo_y = [stats['q1'], stats['whislo']]
             whishi_y = [stats['q3'], stats['whishi']]
             # cap coords
-            cap_left = pos - capwidth * 0.5
-            cap_right = pos + capwidth * 0.5
+            cap_left = pos - width * 0.25
+            cap_right = pos + width * 0.25
             cap_x = [cap_left, cap_right]
             cap_lo = np.full(2, stats['whislo'])
             cap_hi = np.full(2, stats['whishi'])
@@ -4036,16 +4018,14 @@ class Axes(_AxesBase):
             med_y = [stats['med'], stats['med']]
             # notched boxes
             if shownotches:
-                notch_left = pos - width * 0.25
-                notch_right = pos + width * 0.25
-                box_x = [box_left, box_right, box_right, notch_right,
-                         box_right, box_right, box_left, box_left, notch_left,
-                         box_left, box_left]
+                box_x = [box_left, box_right, box_right, cap_right, box_right,
+                         box_right, box_left, box_left, cap_left, box_left,
+                         box_left]
                 box_y = [stats['q1'], stats['q1'], stats['cilo'],
                          stats['med'], stats['cihi'], stats['q3'],
                          stats['q3'], stats['cihi'], stats['med'],
                          stats['cilo'], stats['q1']]
-                med_x = [notch_left, notch_right]
+                med_x = cap_x
             # plain boxes
             else:
                 box_x = [box_left, box_right, box_right, box_left, box_left]
@@ -4483,14 +4463,14 @@ default: :rc:`scatter.edgecolors`
         offsets = np.ma.column_stack([x, y])
 
         collection = mcoll.PathCollection(
-            (path,), scales,
-            facecolors=colors,
-            edgecolors=edgecolors,
-            linewidths=linewidths,
-            offsets=offsets,
-            offset_transform=kwargs.pop('transform', self.transData),
-            alpha=alpha,
-        )
+                (path,), scales,
+                facecolors=colors,
+                edgecolors=edgecolors,
+                linewidths=linewidths,
+                offsets=offsets,
+                transOffset=kwargs.pop('transform', self.transData),
+                alpha=alpha
+                )
         collection.set_transform(mtransforms.IdentityTransform())
         if colors is None:
             collection.set_array(c)
@@ -4816,9 +4796,8 @@ default: :rc:`scatter.edgecolors`
                 edgecolors=edgecolors,
                 linewidths=linewidths,
                 offsets=offsets,
-                offset_transform=mtransforms.AffineDeltaTransform(
-                    self.transData),
-            )
+                transOffset=mtransforms.AffineDeltaTransform(self.transData),
+                )
 
         # Set normalizer if bins is 'log'
         if bins == 'log':
@@ -5188,7 +5167,7 @@ default: :rc:`scatter.edgecolors`
         for name, array in [
                 (ind_dir, ind), (f"{dep_dir}1", dep1), (f"{dep_dir}2", dep2)]:
             if array.ndim > 1:
-                raise ValueError(f"{name!r} is not 1-dimensional")
+                raise ValueError(f"{name} is not 1-dimensional")
 
         if where is None:
             where = True
@@ -5537,7 +5516,7 @@ default: :rc:`scatter.edgecolors`
         _valid_shading = ['gouraud', 'nearest', 'flat', 'auto']
         try:
             _api.check_in_list(_valid_shading, shading=shading)
-        except ValueError:
+        except ValueError as err:
             _api.warn_external(f"shading value '{shading}' not in list of "
                                f"valid values {_valid_shading}. Setting "
                                "shading='auto'.")
@@ -5644,11 +5623,8 @@ default: :rc:`scatter.edgecolors`
         return X, Y, C, shading
 
     def _pcolor_grid_deprecation_helper(self):
-        grid_active = any(axis._major_tick_kw["gridOn"]
-                          for axis in self._get_axis_list())
-        # explicit is-True check because get_axisbelow() can also be 'line'
-        grid_hidden_by_pcolor = self.get_axisbelow() is True
-        if grid_active and not grid_hidden_by_pcolor:
+        if any(axis._major_tick_kw["gridOn"]
+               for axis in self._get_axis_list()):
             _api.warn_deprecated(
                 "3.5", message="Auto-removal of grids by pcolor() and "
                 "pcolormesh() is deprecated since %(since)s and will be "
@@ -6624,7 +6600,7 @@ such objects
             if len(color) != nx:
                 raise ValueError(f"The 'color' keyword argument must have one "
                                  f"color per dataset, but {nx} datasets and "
-                                 f"{len(color)} colors were provided")
+                                 f"{len(color!r)} colors were provided")
 
         hist_kwargs = dict()
 
@@ -7512,8 +7488,7 @@ such objects
         """
         cxy, freqs = mlab.cohere(x=x, y=y, NFFT=NFFT, Fs=Fs, detrend=detrend,
                                  window=window, noverlap=noverlap,
-                                 scale_by_freq=scale_by_freq, sides=sides,
-                                 pad_to=pad_to)
+                                 scale_by_freq=scale_by_freq)
         freqs += Fc
 
         self.plot(freqs, cxy, **kwargs)
@@ -7658,7 +7633,7 @@ such objects
             else:
                 Z = 20. * np.log10(spec)
         else:
-            raise ValueError(f'Unknown scale {scale!r}')
+            raise ValueError(f'Unknown scale {scale}')
 
         Z = np.flipud(Z)
 
